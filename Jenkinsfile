@@ -33,7 +33,7 @@ pipeline {
     }
     success {
       sh 'ls -la target/'
-      sh 'scp target/*.jar root@ssh_server:home/ubuntu/artefactos/spring-docker/'
+      sh 'scp target/*.jar root@ssh_server:/home/ubuntu/artefactos/spring-docker/'
     }
   }
 }

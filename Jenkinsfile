@@ -33,12 +33,12 @@ pipeline {
   post {
     always {
       junit '**/target/surefire-reports/*.xml'
-      archiveArtifacts artifacts: '$ARTIFACT_NAME', fingerprint: true
+      archiveArtifacts artifacts: "${ARTIFACT_NAME}", fingerprint: true
     }
     success {
       sh 'ls -la target/'
-      sh 'scp $ARTIFACT_NAME $DEPLOY_USER@$STAGING_SERVER:$REMOTE_DIR'
-      sh 'ssh $DEPLOY_USER@$STAGING_SERVER "cd $REMOTE_DIR && nohup java -jar $(ls -t *.jar | head -1) > app.log 2>&1 &"'
+      sh "scp ${ARTIFACT_NAME} ${DEPLOY_USER}@${STAGING_SERVER}:${REMOTE_DIR}"
+      sh "ssh ${DEPLOY_USER}@${STAGING_SERVER} 'cd ${REMOTE_DIR} && nohup java -jar \$(ls -t *.jar | head -1) > app.log 2>&1 &'"
     }
   }
 }

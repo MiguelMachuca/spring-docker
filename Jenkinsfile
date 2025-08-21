@@ -3,7 +3,7 @@ pipeline {
   environment {
     IMAGE_NAME = "demo-ci-cd:latest"
     STAGING_SERVER = "ssh_server"
-    ARTIFACT_NAME = "target/*.jar"
+    ARTIFACT_NAME = "target/demo-0.0.1-SNAPSHOT.jar"
     DEPLOY_USER = "root"
     REMOTE_DIR = "/home/ubuntu/artefactos/spring-docker/"
   }

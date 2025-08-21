@@ -2,6 +2,10 @@ pipeline {
   agent any
   environment {
     IMAGE_NAME = "demo-ci-cd:latest"
+    STAGING_SERVER = "ssh_server"
+    ARTIFACT_NAME = "target/*.jar"
+    DEPLOY_USER = "root"
+    REMOTE_DIR = "/home/ubuntu/artefactos/spring-docker/"
   }
   stages {
     stage('Checkout') {
@@ -29,11 +33,12 @@ pipeline {
   post {
     always {
       junit '**/target/surefire-reports/*.xml'
-      archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+      archiveArtifacts artifacts: '$ARTIFACT_NAME', fingerprint: true
     }
     success {
       sh 'ls -la target/'
-      sh 'scp target/*.jar root@ssh_server:/home/ubuntu/artefactos/spring-docker/'
+      sh 'scp $ARTIFACT_NAME $DEPLOY_USER@$STAGING_SERVER:$REMOTE_DIR'
+      sh 'ssh $DEPLOY_USER@$STAGING_SERVER "cd $REMOTE_DIR && nohup java -jar $(ls -t *.jar | head -1) > app.log 2>&1 &"'
     }
   }
 }

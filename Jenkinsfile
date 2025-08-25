@@ -2,10 +2,11 @@ pipeline {
   agent any
   environment {
     IMAGE_NAME = "demo-ci-cd:latest"
-    STAGING_SERVER = "ssh_server"
+    VM_IP = "74.163.99.83"  // IP de tu VM
+    VM_USER = "azureuser"   // Usuario de tu VM
+    SSH_KEY = credentials('vm-ssh-key') // Credencial que debes configurar en Jenkins
     ARTIFACT_NAME = "target/demo-0.0.1-SNAPSHOT.jar"
-    DEPLOY_USER = "root"
-    REMOTE_DIR = "/home/ubuntu/artefactos/spring-docker/"
+    REMOTE_DIR = "/home/azureuser/artefactos/"
   }
   stages {
     stage('Checkout') {
@@ -18,15 +19,29 @@ pipeline {
         sh 'mvn -B clean package'
       }
     }
-    stage('Build Docker Image') {
+    stage('Deploy to VM') {
       steps {
-        sh 'docker build -t $IMAGE_NAME .'
-      }
-    }
-    stage('Run Container') {
-      steps {
-        sh 'docker rm -f demo-ci-cd || true'
-        sh 'docker run -d --name demo-ci-cd -p 8080:8080 $IMAGE_NAME'
+        script {
+          // Crear directorio remoto si no existe
+          sh """
+            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ${VM_USER}@${VM_IP} \
+            "mkdir -p ${REMOTE_DIR}"
+          """
+          
+          // Copiar el artefacto
+          sh """
+            scp -o StrictHostKeyChecking=no -i ${SSH_KEY} \
+            ${ARTIFACT_NAME} ${VM_USER}@${VM_IP}:${REMOTE_DIR}
+          """
+          
+          // Detener aplicación anterior si existe y ejecutar la nueva
+          sh """
+            ssh -o StrictHostKeyChecking=no -i ${SSH_KEY} ${VM_USER}@${VM_IP} \
+            "cd ${REMOTE_DIR} && \
+            pkill -f 'java -jar' || true && \
+            nohup java -jar \$(ls -t ${REMOTE_DIR}*.jar | head -1) > app.log 2>&1 &"
+          """
+        }
       }
     }
   }
@@ -34,11 +49,6 @@ pipeline {
     always {
       junit '**/target/surefire-reports/*.xml'
       archiveArtifacts artifacts: "${ARTIFACT_NAME}", fingerprint: true
-    }
-    success {
-      sh 'ls -la target/'
-      sh "scp ${ARTIFACT_NAME} ${DEPLOY_USER}@${STAGING_SERVER}:${REMOTE_DIR}"
-      sh "ssh ${DEPLOY_USER}@${STAGING_SERVER} 'cd ${REMOTE_DIR} && nohup java -jar \$(ls -t *.jar | head -1) > app.log 2>&1 &'"
     }
   }
 }
